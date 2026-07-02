@@ -125,8 +125,10 @@ function migrateChatData(db) {
 }
 
 function writeDB(data) {
-    if (!isVercel) {
+    try {
         fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+    } catch (e) {
+        console.error('Failed to write DB:', e.message);
     }
 }
 
@@ -1335,32 +1337,321 @@ app.get('/api/warmup', async (req, res) => {
 });
 
 app.get('/api/games/search', rateLimit, (req, res) => {
-    rawgProxy('games', req, res);
+     rawgProxy('games', req, res);
+ });
+
+const GAMEBRAIN_API_KEY = process.env.GAMEBRAIN_API_KEY || '65d9d9e4d9eb4edc8866ac23d7749548';
+const GAMEBRAIN_BASE = 'https://api.gamebrain.co/v1';
+const gamebrainCache = new Map();
+
+async function fetchFromGamebrain(path, params) {
+    const cacheKey = 'gb:' + path + ':' + JSON.stringify(params || {});
+    const cached = gamebrainCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiry) {
+        return cached.data;
+    }
+
+    const url = new URL(GAMEBRAIN_BASE + path);
+    Object.entries(params || {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+    });
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    try {
+        const response = await fetch(url.toString(), {
+            headers: { 'x-api-key': GAMEBRAIN_API_KEY, 'Accept': 'application/json' },
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error('Gamebrain error ' + response.status + ': ' + text.slice(0, 200));
+        }
+        const data = await response.json();
+        gamebrainCache.set(cacheKey, { data, expiry: Date.now() + 1000 * 60 * 60 });
+        return data;
+    } catch (error) {
+        clearTimeout(timeout);
+        throw error;
+    }
+}
+
+app.get('/api/games/news', rateLimit, async (req, res) => {
+    try {
+        res.setHeader('Cache-Control', 'public, max-age=1800, stale-while-revalidate=120');
+        const slugs = Object.keys(MOCK_GAME_DATA).slice(0, 8);
+        const newsItems = [];
+        const seen = new Set();
+        for (const slug of slugs) {
+            try {
+                const search = await fetchFromGamebrain('/v1/games/suggestions', { query: slug, limit: 1 });
+                const item = (search.results && search.results[0]) || null;
+                if (!item || !item.id) continue;
+                const gid = String(item.id);
+                if (seen.has(gid)) continue;
+                seen.add(gid);
+                const news = await fetchFromGamebrain(`/v1/games/${gid}/news`, { limit: 3 });
+                const articles = Array.isArray(news) ? news : (news.results || []);
+                articles.forEach(article => {
+                    newsItems.push({
+                        game: item.name || MOCK_GAME_DATA[slug]?.title || slug,
+                        game_image: item.image || '',
+                        title: article.title || article.name || 'خبر',
+                        snippet: article.snippet || article.description || '',
+                        link: article.url || article.link || (item.link || ''),
+                        date: article.date || article.published_at || ''
+                    });
+                });
+            } catch (e) {
+                console.warn('Gamebrain news skip', slug, e.message);
+            }
+        }
+        newsItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+        res.json({ results: newsItems.slice(0, 30) });
+    } catch (error) {
+        console.error('Gamebrain news error:', error.message);
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        res.json({ results: [] });
+    }
 });
 
 app.get('/api/games/:slug', rateLimit, (req, res) => {
-    rawgProxy(`games/${req.params.slug}`, req, res);
-});
+     rawgProxy(`games/${req.params.slug}`, req, res);
+ });
 
 app.get('/api/games/:slug/screenshots', rateLimit, (req, res) => {
-    rawgProxy(`games/${req.params.slug}/screenshots`, req, res);
-});
+     rawgProxy(`games/${req.params.slug}/screenshots`, req, res);
+ });
 
 app.get('/api/games/:slug/movies', rateLimit, (req, res) => {
-    rawgProxy(`games/${req.params.slug}/movies`, req, res);
-});
-
-app.get('/api/games/:slug/stores', rateLimit, (req, res) => {
-    rawgProxy(`games/${req.params.slug}/stores`, req, res);
-});
+     rawgProxy(`games/${req.params.slug}/movies`, req, res);
+ });
 
 app.get('/api/games/:slug/achievements', rateLimit, (req, res) => {
-    rawgProxy(`games/${req.params.slug}/achievements`, req, res);
-});
+     rawgProxy(`games/${req.params.slug}/achievements`, req, res);
+ });
 
-app.get('/api/ratings', rateLimit, (req, res) => {
-    rawgProxy('ratings', req, res);
-});
+    app.get('/api/ratings', rateLimit, (req, res) => {
+        rawgProxy('ratings', req, res);
+    });
+
+    app.get('/api/genres', rateLimit, (req, res) => {
+        rawgProxy('genres', req, res);
+    });
+
+    app.get('/api/games/:slug/reddit', rateLimit, (req, res) => {
+        rawgProxy(`games/${req.params.slug}/reddit`, req, res);
+    });
+
+    const METACRITIC_PLATFORMS = {
+        'playstation': 'playstation-4',
+        'ps4': 'playstation-4',
+        'xbox': 'xbox-one',
+        'xbox-one': 'xbox-one',
+        'nintendo': 'switch',
+        'switch': 'switch',
+        'pc': 'pc',
+        'mac': 'pc',
+        'linux': 'pc',
+        'ios': 'ios',
+        'android': 'android',
+        'xbox-series-x': 'xbox-series-x',
+        'playstation-5': 'playstation-5'
+    };
+
+    function getMetacriticPlatformUrl(rawgPlatformSlug) {
+        const base = String(rawgPlatformSlug || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+        return METACRITIC_PLATFORMS[base] || 'playstation-4';
+    }
+
+    function parseMetacriticPage(html, gameName) {
+        const result = { metascore: null, userscore: null, critic_reviews: null, user_reviews: null };
+        if (!html) return result;
+
+        const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        const extractValue = (regex, str, group) => {
+            group = group || 1;
+            const m = str.match(regex);
+            return m ? m[group] : null;
+        };
+
+        const gameNameEsc = escapeRegExp(gameName || '');
+        const namePattern = gameNameEsc.length > 3 ? gameNameEsc : '(?:[^<]{3,120})';
+
+        let metascoreMatch = null;
+        const metascorePatterns = [
+            new RegExp('class="metascore_w(?:all| xl) game"[^>]*>\\s*(?:<span[^>]*>)?\\s*<([0-9]{1,2})', 'i'),
+            new RegExp(`data-qa=["']metascore["'].*?<span[^>]*>([0-9]{1,2})`, 'is'),
+            new RegExp(`metascore[^>]*>\\s*<([0-9]{1,2})`, 'i'),
+            new RegExp(`class="score[^"]*"\\s+id="game[^"]*"[^>]*>\\s*([0-9]{1,2})`, 'i'),
+            new RegExp(`product_rating[^>]*>\\s*<span[^>]*>([0-9]{1,2})`, 'i'),
+            new RegExp(`metascore.*?([0-9]{1,2}).*?out of 100`, 'is'),
+            new RegExp(`<span[^>]*class="[^"]*metascore[^"]*"[^>]*>\\s*([0-9]{1,2})\\s*</span>`, 'i'),
+            new RegExp(`"metascore":\s*"([0-9]{1,2})"`, 'i'),
+            new RegExp(`metascore[^0-9]*([0-9]{1,2})`, 'i'),
+            new RegExp(`ratingValue["']?\s*[:=]\s*["']?([0-9]{1,2})`, 'i'),
+        ];
+
+        for (const pattern of metascorePatterns) {
+            const m = html.match(pattern);
+            if (m) {
+                metascoreMatch = m[1];
+                break;
+            }
+        }
+
+        if (!metascoreMatch) {
+            const summaryBlockMatch = html.match(/<div[^>]*class="[^"]*summary[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+            if (summaryBlockMatch) {
+                const summaryMatch = summaryBlockMatch[1].match(/([0-9]{1,2})\s*\/\s*100/);
+                if (summaryMatch) metascoreMatch = summaryMatch[1];
+            }
+        }
+
+        if (!metascoreMatch) {
+            const psMatch = html.match(/(?:metascore|metacritic).*?([0-9]{1,2}).*?out\s*of\s*100/is);
+            if (psMatch) metascoreMatch = psMatch[1];
+        }
+
+        if (metascoreMatch) {
+            const score = parseInt(metascoreMatch, 10);
+            if (!isNaN(score) && score >= 0 && score <= 100) result.metascore = score;
+        }
+
+        let userscoreMatch = null;
+        const userscorePatterns = [
+            new RegExp(`data-qa=["']userscore["'].*?<span[^>]*>([0-9.]+)`, 'is'),
+            new RegExp(`class="metascore_w(?:ell| user)[^"]*"[^>]*>\\s*<([0-9.]+)`, 'i'),
+            new RegExp(`class="score[^"]*"[^>]*>\\s*([.0-9]+)`, 'i'),
+            new RegExp(`userscore[^>]*>\\s*([.0-9]+)`, 'i'),
+            new RegExp(`user_score[^"]*["']?\s*[:=]\s*["']?([.0-9]+)`, 'i'),
+            new RegExp(`"userscore":\s*"([.0-9]+)"`, 'i'),
+        ];
+
+        for (const pattern of userscorePatterns) {
+            const m = html.match(pattern);
+            if (m) {
+                userscoreMatch = m[1];
+                break;
+            }
+        }
+
+        if (!userscoreMatch) {
+            const userSectionMatch = html.match(/<div[^>]*id=["']user_scores[^>]*>([\s\S]{0,2000})/i);
+            if (userSectionMatch) {
+                const usMatch = userSectionMatch[1].match(/([.0-9]+)\s*\/\s*10/);
+                if (usMatch) userscoreMatch = usMatch[1];
+            }
+        }
+
+        if (userscoreMatch) {
+            const score = parseFloat(userscoreMatch);
+            if (!isNaN(score) && score >= 0 && score <= 10) {
+                result.userscore = score;
+            }
+        }
+
+        try {
+            const criticTco = (html.match(/critic[^}]*"tco"[:\s]*([0-9]+)/i) || []);
+            if (criticTco[1]) result.critic_reviews = parseInt(criticTco[1], 10);
+        } catch (e) {}
+
+        try {
+            const userRevMatch = html.match(/user_reviews[^}]*"count"[:\s]*"?([0-9]+)"?/i);
+            if (userRevMatch) result.user_reviews = parseInt(userRevMatch[1], 10);
+        } catch (e) {}
+
+        return result;
+    }
+
+    async function scrapeMetacritic(gameName, platformSlug) {
+        const safeSlug = String(platformSlug || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+        const mcPlatform = METACRITIC_PLATFORMS[safeSlug] || METACRITIC_PLATFORMS['playstation'];
+
+        const q = encodeURIComponent(String(gameName || '').trim());
+        if (!q) return { error: 'نام بازی نامعتبر است' };
+
+        let gameUrl = null;
+
+        try {
+            const searchUrl = `https://www.metacritic.com/search/${mcPlatform}/${q}?page=1`;
+            const searchRes = await fetch(searchUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; Cafe-Bot/1.0; +https://localhost)',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                signal: AbortSignal.timeout(10000)
+            });
+
+            if (searchRes.ok) {
+                const searchHtml = await searchRes.text();
+                const escapedPart = escapeRegExp('"/game/' + mcPlatform + '/');
+                const urlRegex = new RegExp('href=' + escapedPart + '[^"]+"[^>]*>' + namePattern + '<', 'i');
+                const urlMatch = searchHtml.match(urlRegex);
+                if (urlMatch) {
+                    const href = urlMatch[0].match(/href="([^"]+)"/);
+                    if (href) gameUrl = 'https://www.metacritic.com' + href[1];
+                }
+            }
+        } catch (e) {
+            console.warn('Metacritic search failed:', e.message);
+        }
+
+        if (!gameUrl) {
+            const slug = String(gameName || '').toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            gameUrl = `https://www.metacritic.com/game/${mcPlatform}/${slug}`;
+        }
+
+        try {
+            const gameRes = await fetch(gameUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; Cafe-Bot/1.0; +https://localhost)',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                },
+                signal: AbortSignal.timeout(10000)
+            });
+
+            if (gameRes.ok) {
+                const gameHtml = await gameRes.text();
+                const scores = parseMetacriticPage(gameHtml, gameName);
+                if (scores.metascore !== null || scores.userscore !== null) {
+                    return { game_url: gameUrl, ...scores };
+                }
+            }
+        } catch (e) {
+            console.warn('Metacritic game page fetch failed:', e.message);
+        }
+
+        return { error: 'امتیاز متاکریتیک پیدا نشد', game_url: gameUrl };
+    }
+
+    app.get('/api/games/:slug/metacritic', rateLimit, async (req, res) => {
+        try {
+            const rawgData = await fetchFromRawg(`games/${req.params.slug}`);
+            const gameName = rawgData.name;
+            const primaryPlatform = (rawgData.platforms && rawgData.platforms[0])
+                ? (rawgData.platforms[0].platform ? rawgData.platforms[0].platform.name : rawgData.platforms[0].name)
+                : 'playstation';
+
+            const mcData = await scrapeMetacritic(gameName, primaryPlatform);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            res.json({ game: gameName, metacritic: mcData });
+        } catch (error) {
+            console.error('Metacritic proxy error:', error.message);
+            res.setHeader('Cache-Control', 'public, max-age=300');
+            res.json({ game: req.params.slug, metacritic: { error: 'خطا در دریافت امتیاز متاکریتیک.' } });
+        }
+    });
+
+    app.get('/api/ratings', rateLimit, (req, res) => {
+        rawgProxy('ratings', req, res);
+    });
 
 app.get('/api/genres', rateLimit, (req, res) => {
     rawgProxy('genres', req, res);
@@ -1483,6 +1774,38 @@ if (!isVercel && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
         console.log('Server running on http://localhost:' + PORT);
         warmupImageCache().catch(() => {});
     });
+
+    const dbAtStart = readDB();
+    if (!dbAtStart.banners || dbAtStart.banners.length === 0) {
+        dbAtStart.banners = [
+            {
+                id: 1,
+                src: 'https://placehold.co/1200x400/164A41/FFF?text=بنر+تخفیف+ویژه',
+                link: 'deals.html',
+                duration: 5,
+                group: 1,
+                date: new Date().toISOString()
+            },
+            {
+                id: 2,
+                src: 'https://placehold.co/1200x400/1a3c2a/FFF?text=بازی+های+جدید',
+                link: 'games.html',
+                duration: 5,
+                group: 1,
+                date: new Date().toISOString()
+            },
+            {
+                id: 3,
+                src: 'https://placehold.co/1200x400/0f2e22/FFF?text=گیفت+کارت+موبایل',
+                link: 'giftcards-mobile.html',
+                duration: 5,
+                group: 2,
+                date: new Date().toISOString()
+            }
+        ];
+        writeDB(dbAtStart);
+        console.log('Default banners seeded');
+    }
 } else {
     server = app;
 }
