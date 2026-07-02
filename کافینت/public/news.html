@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📰 اخبار بازی‌ها - کافینت آنلاین</title>
+    <link rel="stylesheet" href="style.css?v=20260701">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+    <link rel="stylesheet" href="fonts/all.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://api.rawg.io">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <a href="index.html" class="back-btn"><i class="fas fa-arrow-right"></i> بازگشت</a>
+            <h1>📰 اخبار بازی‌ها</h1>
+            <p class="page-subtitle">آخرین اخبار و به‌روزرسانی‌های دنیای بازی</p>
+        </header>
+        <main>
+            <div id="newsContainer" class="news-grid">
+                <div class="loading">در حال بارگذاری اخبار...</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function translateText(text) {
+            if (!text || text.length < 3) return text;
+            if (/[\u0600-\u06FF]/.test(text)) return text;
+
+            const cacheKey = 'tr_' + btoa(text.slice(0, 100));
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) return cached;
+
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=en|fa`;
+                const response = await fetch(url);
+                const data = await response.json();
+                let translated = text;
+                if (data.responseData && data.responseData.translatedText) {
+                    translated = data.responseData.translatedText;
+                }
+                localStorage.setItem(cacheKey, translated);
+                return translated;
+            } catch (error) {
+                return text;
+            }
+        }
+
+        async function loadNews() {
+            const container = document.getElementById('newsContainer');
+            try {
+                const res = await fetch('/api/games/news');
+                const data = await res.json();
+                const items = data.results || [];
+
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="empty-state">هنوز خبری منتشر نشده است.</div>';
+                    return;
+                }
+
+                const translatedItems = [];
+                for (const item of items) {
+                    const title = await translateText(item.title);
+                    const snippet = await translateText(item.snippet || '');
+                    translatedItems.push({ ...item, title, snippet });
+                }
+
+                let html = '';
+                translatedItems.forEach(item => {
+                    const image = item.game_image || 'https://placehold.co/400x225/164A41/FFF?text=Games';
+                    html += `
+                        <article class="news-card">
+                            <div class="news-image">
+                                <img src="${image}" alt="${item.game}" loading="lazy">
+                            </div>
+                            <div class="news-content">
+                                <h2 class="news-game">${item.game}</h2>
+                                <h3 class="news-title">${title}</h3>
+                                <p class="news-snippet">${snippet || 'بدون توضیحات'}</p>
+                                <div class="news-footer">
+                                    ${item.date ? `<span class="news-date"><i class="fas fa-calendar-alt"></i> ${item.date}</span>` : ''}
+                                    ${item.link ? `<a href="${item.link}" target="_blank" rel="noopener" class="news-link">مطالعه بیشتر</a>` : ''}
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading news:', error);
+                container.innerHTML = '<div class="empty-state">خطا در بارگذاری اخبار. لطفاً دوباره تلاش کنید.</div>';
+            }
+        }
+
+        function handleMobileNav() {
+            const isMobile = window.innerWidth <= 768;
+            const oldIcons = document.querySelectorAll('.profile-icon, .support-icon');
+            const bottomNav = document.querySelector('.bottom-nav');
+
+            if (isMobile) {
+                oldIcons.forEach(icon => {
+                    icon.style.display = 'none';
+                    icon.style.visibility = 'hidden';
+                    icon.style.opacity = '0';
+                });
+                if (bottomNav) {
+                    bottomNav.style.display = 'flex';
+                }
+                document.body.style.paddingBottom = '60px';
+            } else {
+                if (bottomNav) {
+                    bottomNav.style.display = 'none';
+                }
+                document.body.style.paddingBottom = '0';
+            }
+        }
+
+        window.addEventListener('load', handleMobileNav);
+        window.addEventListener('resize', handleMobileNav);
+        document.addEventListener('DOMContentLoaded', loadNews);
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/games.html" class="nav-icon" title="بازی‌ها">
+            <i class="fas fa-gamepad"></i>
+        </a>
+        <a href="/news.html" class="nav-icon" title="اخبار">
+            <i class="fas fa-newspaper"></i>
+        </a>
+        <a href="/giftcards.html" class="nav-icon" title="گیفت کارت">
+            <i class="fas fa-gift"></i>
+        </a>
+        <a href="/chat.html" class="nav-icon" title="چت">
+            <i class="fas fa-comments"></i>
+        </a>
+    </nav>
+</body>
+</html>
