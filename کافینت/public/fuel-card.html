@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت نام کارت سوخت جدید</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>ثبت نام کارت سوخت جدید</h1>
+        </header>
+        <main>
+            <form id="fuelCardForm" class="form-card">
+                <div class="form-group">
+                    <label for="ownerPhone">شماره تلفن همراه</label>
+                    <input type="tel" id="ownerPhone" name="ownerPhone" placeholder="09xx-xxx-xxxx" required>
+                    <small><span class="warning-text">به نام صاحب خودرو</span></small>
+                </div>
+                <div class="form-group">
+                    <label for="ownerNationalId">کد ملی صاحب خودرو</label>
+                    <input type="text" id="ownerNationalId" name="ownerNationalId" maxlength="10" required>
+                </div>
+                <div class="form-group">
+                    <label for="plateLetters">حروف پلاک</label>
+                    <input type="text" id="plateLetters" name="plateLetters" maxlength="3" required>
+                </div>
+                <div class="form-group">
+                    <label for="plateNumbersFirst">عدد پلاک (۳ رقم اول)</label>
+                    <input type="text" id="plateNumbersFirst" name="plateNumbersFirst" maxlength="3" required>
+                </div>
+                <div class="form-group">
+                    <label for="plateNumbersSecond">عدد پلاک (۳ رقم آخر)</label>
+                    <input type="text" id="plateNumbersSecond" name="plateNumbersSecond" maxlength="3" required>
+                </div>
+                <div class="form-group">
+                    <label for="vin">شماره شاسی (VIN)</label>
+                    <input type="text" id="vin" name="vin" maxlength="17" required>
+                </div>
+                <div class="form-group">
+                    <label for="requestType">نوع درخواست</label>
+                    <select id="requestType" name="requestType" required>
+                        <option value="new">صدور کارت جدید</option>
+                        <option value="duplicate">المثنی (گم شدگی/خرابی)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="additionalNotes">توضیحات اضافی</label>
+                    <div class="textarea-wrapper">
+
+                        <textarea id="additionalNotes" name="additionalNotes" class="additional-notes" style="height: 150px;" data-rtl-listener="true"></textarea>
+
+                        <div class="attachment-preview hidden" id="attachmentPreview"></div>
+
+                        <button type="button" class="pin-attachment" id="pinAttachment" title="افزودن فایل">
+
+                            <i class="fas fa-paperclip"></i>
+
+                        </button>
+
+                        <div class="textarea-placeholder" id="textareaPlaceholder">
+
+                            <span>میتوانید چهار تصویر آپلود</span><span class="cursor"></span>
+
+                        </div>
+
+                    </div>
+
+                    <input type="file" id="attachmentFile" accept="image/*,.pdf" style="display: none;">
+                </div>
+                <button type="submit" class="btn-next">ثبت درخواست</button>
+            </form>
+        </main>
+    </div>
+    <link rel="stylesheet" href="fonts/all.css">
+    <script src="app.js"></script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

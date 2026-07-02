@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Games - کافینت آنلاین</title>
+    <link rel="stylesheet" href="style.css?v=20260701">
+    <link rel="stylesheet" href="fonts/all.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>💻 PC Games</h1>
+        </header>
+        <main>
+            <div class="games-header">
+                <div class="games-filters">
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="">همه دسته‌ها</option>
+                    </select>
+                    <select id="sortFilter" class="filter-select">
+                        <option value="newest">جدیدترین</option>
+                        <option value="popular">محبوب‌ترین</option>
+                        <option value="price-low">قیمت: کم به زیاد</option>
+                        <option value="price-high">قیمت: زیاد به کم</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="gamesGrid" class="games-grid">
+                <div class="loading">در حال بارگذاری...</div>
+            </div>
+            
+            <div id="pagination" class="pagination">
+                <button id="prevPage" class="page-btn" disabled>قبلی</button>
+                <span id="pageInfo" class="page-info">صفحه 1</span>
+                <button id="nextPage" class="page-btn">بعدی</button>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        async function loadGames(page = 1, category = '', sort = 'newest') {
+            const grid = document.getElementById('gamesGrid');
+            const response = await fetch(`/api/games?page=${page}&limit=12&category=${category}&sort=${sort}`);
+            const data = await response.json();
+            
+            if (data.games.length === 0) {
+                grid.innerHTML = '<div class="no-games">بازی یافت نشد</div>';
+                return;
+            }
+            
+            grid.innerHTML = data.games.map(game => `
+                <div class="game-card">
+                    <div class="game-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <h3 class="game-title">${game.title}</h3>
+                    <span class="game-category">${game.category}</span>
+                    <div class="game-price">${game.price > 0 ? game.price.toLocaleString('fa-IR') + ' تومان' : 'رایگان'}</div>
+                    <div class="game-date">
+                        <i class="fas fa-calendar-alt"></i> 
+                        ${new Date(game.releaseDate).toLocaleDateString('fa-IR')}
+                    </div>
+                    ${game.trending ? '<span class="trending-badge">🔥 ترندینگ</span>' : ''}
+                </div>
+            `).join('');
+            
+            currentPage = data.pagination.page;
+            totalPages = data.pagination.totalPages;
+            updatePagination();
+        }
+        
+        function updatePagination() {
+            document.getElementById('pageInfo').textContent = `صفحه ${currentPage} از ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+        }
+        
+        async function loadCategories() {
+            const response = await fetch('/api/games/categories');
+            const categories = await response.json();
+            const select = document.getElementById('categoryFilter');
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                select.appendChild(option);
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCategories();
+            loadGames();
+            
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    loadGames(currentPage - 1, document.getElementById('categoryFilter').value, document.getElementById('sortFilter').value);
+                }
+            });
+            
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    loadGames(currentPage + 1, document.getElementById('categoryFilter').value, document.getElementById('sortFilter').value);
+                }
+            });
+            
+            document.getElementById('categoryFilter').addEventListener('change', () => {
+                loadGames(1, document.getElementById('categoryFilter').value, document.getElementById('sortFilter').value);
+            });
+            
+            document.getElementById('sortFilter').addEventListener('change', () => {
+                loadGames(1, document.getElementById('categoryFilter').value, document.getElementById('sortFilter').value);
+            });
+        });
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

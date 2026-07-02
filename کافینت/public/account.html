@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حساب کاربری</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="fonts/all.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>حساب کاربری</h1>
+        </header>
+        <main>
+            <div class="form-card">
+                <div class="profile-field">
+                    <label>نام کاربری</label>
+                    <div class="field-value">
+                        <span id="displayUsername"></span>
+                        <a href="#" class="edit-btn" id="editUsername"><i class="fas fa-edit"></i></a>
+                    </div>
+                </div>
+                <div class="profile-field">
+                    <label>شماره همراه</label>
+                    <div class="field-value">
+                        <span id="displayPhone"></span>
+                        <a href="#" class="edit-btn" id="editPhone"><i class="fas fa-edit"></i></a>
+                    </div>
+                </div>
+                <a href="profile.html" class="btn-next">بازگشت</a>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

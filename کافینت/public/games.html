@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 بازی‌ها - کافینت آنلاین</title>
+    <link rel="stylesheet" href="style.css?v=20260701">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+    <link rel="stylesheet" href="fonts/all.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://api.rawg.io">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>🎮 بازی‌ها</h1>
+        </header>
+        <main>
+            <div class="search-section">
+                <div class="suggestive-search">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInput" class="search-input" placeholder="جستجوی بازی..." autocomplete="off">
+                    </div>
+                    <div id="searchOverlay">
+                        <div class="search-overlay">
+                            <span class="search-placeholder"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="games-filters">
+                <select id="genreFilter" class="filter-select">
+                    <option value="">همه ژانرها</option>
+                </select>
+                <select id="platformFilter" class="filter-select">
+                    <option value="">همه پلتفرم‌ها</option>
+                </select>
+                <select id="sortFilter" class="filter-select">
+                    <option value="-added" selected>محبوب‌ترین</option>
+                    <option value="-rating">بالاترین امتیاز</option>
+                    <option value="-released">جدیدترین</option>
+                </select>
+            </div>
+
+            <div id="gamesGrid" class="games-grid">
+                <div class="loading">در حال بارگذاری...</div>
+            </div>
+
+            <div id="pagination" class="pagination">
+                <button id="prevPage" class="page-btn" disabled>قبلی</button>
+                <span id="pageInfo" class="page-info">صفحه 1</span>
+                <button id="nextPage" class="page-btn">بعدی</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="suggestive-search.js?v=20260701">
+        // Hide old floating icons on mobile, show bottom nav
+        function handleMobileNav() {
+            const isMobile = window.innerWidth <= 768;
+            const oldIcons = document.querySelectorAll('.profile-icon, .support-icon');
+            const bottomNav = document.querySelector('.bottom-nav');
+            
+            if (isMobile) {
+                oldIcons.forEach(icon => {
+                    icon.style.display = 'none';
+                    icon.style.visibility = 'hidden';
+                    icon.style.opacity = '0';
+                });
+                if (bottomNav) {
+                    bottomNav.style.display = 'flex';
+                }
+                document.body.style.paddingBottom = '60px';
+            } else {
+                if (bottomNav) {
+                    bottomNav.style.display = 'none';
+                }
+                document.body.style.paddingBottom = '0';
+            }
+        }
+        
+        window.addEventListener('load', handleMobileNav);
+        window.addEventListener('resize', handleMobileNav);
+
+    </script>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentQuery = "";
+        let currentGenre = "";
+        let currentPlatform = "";
+        let currentSort = "-added";
+
+        async function translateText(text) {
+            if (!text || text.length < 3) return text;
+            if (/[\u0600-\u06FF]/.test(text)) return text;
+
+            const cacheKey = 'tr_' + btoa(text.slice(0, 100));
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) return cached;
+
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=en|fa`;
+                const response = await fetch(url);
+                const data = await response.json();
+                let translated = text;
+                if (data.responseData && data.responseData.translatedText) {
+                    translated = data.responseData.translatedText;
+                }
+                localStorage.setItem(cacheKey, translated);
+                return translated;
+            } catch (error) {
+                return text;
+            }
+        }
+
+        function buildGameCard(game) {
+            const genres = (game.genres || []).map(g => g.name).join('، ');
+            const platforms = (game.platforms || []).map(p => p.platform ? p.platform.name : p.name).join('، ');
+            const rating = (game.rating || 0).toFixed(1);
+            const released = game.released ? new Date(game.released).toLocaleDateString('fa-IR') : '-';
+            let bgRaw = game.background_image || game.background_image_additional || '';
+            if (bgRaw && bgRaw.includes('/screenshots/')) {
+                const alt = game.background_image_additional || '';
+                if (alt && !alt.includes('/screenshots/')) {
+                    bgRaw = alt;
+                }
+            }
+            let background = '';
+            if (game.image_base64) {
+                background = 'data:image/jpeg;base64,' + game.image_base64;
+            } else if (bgRaw) {
+                background = '/api/image-proxy?url=' + encodeURIComponent(bgRaw);
+            } else {
+                background = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 200%22><rect fill=%22%23164A41%22 width=%22400%22 height=%22200%22/><text fill=%22%23fff%22 font-family=%22Arial%22 font-size=%2216%22 x=%22200%22 y=%2295%22 text-anchor=%22middle%22>' + encodeURIComponent(game.name) + '</text><text fill=%22%23999%22 font-family=%22Arial%22 font-size=%2212%22 x=%22200%22 y=%22125%22 text-anchor=%22middle%22>تصویر موجود نیست</text></svg>';
+            }
+
+            return `
+                <div class="game-card" onclick="window.location.href='game-detail.html?id=${game.slug}'">
+                    <div class="game-cover">
+                        <img src="${background}" alt="${game.name}" loading="lazy">
+                        <div class="game-rating-badge">⭐ ${rating}</div>
+                    </div>
+                    <div class="game-info">
+                        <h3 class="game-title">${game.name}</h3>
+                        <div class="game-meta">
+                            <span class="game-genres">${genres || '-'}</span>
+                            <span class="game-platforms">${platforms || '-'}</span>
+                        </div>
+                        <div class="game-date">
+                            <i class="fas fa-calendar-alt"></i> ${released}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadGames(page = 1, query = currentQuery, genre = currentGenre, platform = currentPlatform, sort = currentSort) {
+            currentQuery = query;
+            currentGenre = genre;
+            currentPlatform = platform;
+            currentSort = sort;
+            currentPage = page;
+
+            const grid = document.getElementById('gamesGrid');
+            grid.innerHTML = '<div class="loading">در حال بارگذاری...</div>';
+
+            const params = new URLSearchParams();
+            params.set('page', page);
+            params.set('page_size', 24);
+            if (query) params.set('search', query);
+            if (genre) params.set('genres', genre);
+            if (platform)                 params.set('platforms', platform);
+            if (sort) {
+                params.set('ordering', sort);
+                if (sort === '-released') {
+                    const currentYear = new Date().getFullYear();
+                    params.set('dates', `${currentYear - 5}-01-01,${currentYear}-12-31`);
+                }
+            }
+
+            try {
+                const response = await fetch(`/api/games/search?${params.toString()}`);
+                const data = await response.json();
+
+                if (!data.results || data.results.length === 0) {
+                    grid.innerHTML = '<div class="no-games">بازی یافت نشد</div>';
+                    totalPages = 1;
+                } else {
+                    let filteredResults = data.results;
+                    if (currentSort === '-released') {
+                        const currentYear = new Date().getFullYear();
+                        filteredResults = data.results.filter(g => {
+                            if ((g.rating || 0) < 3) return false;
+                            if (!g.released) return false;
+                            const releaseYear = new Date(g.released).getFullYear();
+                            return releaseYear >= currentYear - 10 && releaseYear <= currentYear;
+                        });
+                    } else {
+                        filteredResults = data.results.filter(g => (g.rating || 0) >= 3);
+                    }
+                    if (filteredResults.length === 0) {
+                        grid.innerHTML = '<div class="no-games">بازی یافت نشد</div>';
+                        totalPages = 1;
+                    } else {
+                        grid.innerHTML = filteredResults.map(buildGameCard).join('');
+                        totalPages = Math.ceil((data.count || 0) / 24);
+                    }
+                }
+                updatePagination();
+            } catch (error) {
+                grid.innerHTML = '<div class="no-games">خطا در بارگذاری بازی‌ها</div>';
+                totalPages = 1;
+                updatePagination();
+            }
+        }
+
+        function updatePagination() {
+            document.getElementById('pageInfo').textContent = `صفحه ${currentPage} از ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        async function loadFilters() {
+            try {
+                const genreRes = await fetch('/api/genres');
+                const genreData = await genreRes.json();
+                const genreSelect = document.getElementById('genreFilter');
+                if (genreData.results) {
+                    genreData.results.forEach(g => {
+                        const option = document.createElement('option');
+                        option.value = g.slug;
+                        option.textContent = g.name;
+                        genreSelect.appendChild(option);
+                    });
+                }
+
+                const platformRes = await fetch('/api/platforms');
+                const platformData = await platformRes.json();
+                const platformSelect = document.getElementById('platformFilter');
+                if (platformData.results) {
+                    platformData.results.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = p.name;
+                        platformSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading filters:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFilters();
+            loadGames();
+
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) loadGames(currentPage - 1);
+            });
+
+            document.getElementById('nextPage').addEventListener('click', () => {
+                if (currentPage < totalPages) loadGames(currentPage + 1);
+            });
+
+            document.getElementById('genreFilter').addEventListener('change', (e) => {
+                loadGames(1, '', e.target.value, currentPlatform, currentSort);
+            });
+
+            document.getElementById('platformFilter').addEventListener('change', (e) => {
+                loadGames(1, '', currentGenre, e.target.value, currentSort);
+            });
+
+            document.getElementById('sortFilter').addEventListener('change', (e) => {
+                loadGames(1, '', currentGenre, currentPlatform, e.target.value);
+            });
+
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                new SuggestiveSearch(searchInput, {
+                    suggestions: [
+                        "جستجوی بازی...",
+                        "اکشن و ماجراجویی...",
+                        "بازی‌های رایگان...",
+                        "جدیدترین بازی‌ها...",
+                    ],
+                    effect: 'typewriter',
+                    onChange: (value) => {
+                        clearTimeout(searchInput.debounce);
+                        searchInput.debounce = setTimeout(() => {
+                            loadGames(1, value, currentGenre, currentPlatform, currentSort);
+                        }, 300);
+                    }
+                });
+
+                searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        clearTimeout(searchInput.debounce);
+                        loadGames(1, searchInput.value, currentGenre, currentPlatform, currentSort);
+                    }
+                });
+            }
+        });
+    
+        // Hide old floating icons on mobile, show bottom nav
+        function handleMobileNav() {
+            const isMobile = window.innerWidth <= 768;
+            const oldIcons = document.querySelectorAll('.profile-icon, .support-icon');
+            const bottomNav = document.querySelector('.bottom-nav');
+            
+            if (isMobile) {
+                oldIcons.forEach(icon => {
+                    icon.style.display = 'none';
+                    icon.style.visibility = 'hidden';
+                    icon.style.opacity = '0';
+                });
+                if (bottomNav) {
+                    bottomNav.style.display = 'flex';
+                }
+                document.body.style.paddingBottom = '60px';
+            } else {
+                if (bottomNav) {
+                    bottomNav.style.display = 'none';
+                }
+                document.body.style.paddingBottom = '0';
+            }
+        }
+        
+        window.addEventListener('load', handleMobileNav);
+        window.addEventListener('resize', handleMobileNav);
+
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

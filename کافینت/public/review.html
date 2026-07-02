@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بررسی اطلاعات</title>
+    <link rel="stylesheet" href="style.css?v=20260701">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="fonts/all.css">
+    <style>
+        @media (max-width: 768px) {
+            .profile-icon, .support-icon {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+                position: absolute !important;
+            }
+            .bottom-nav { display: flex !important; }
+            body { padding-bottom: 60px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>بررسی اطلاعات</h1>
+        </header>
+        <main>
+            <div class="form-card" id="reviewData">
+                <h2>اطلاعات وارد شده</h2>
+                <div class="info-item"><strong>شماره تلفن:</strong> <span id="displayPhone"></span></div>
+                <div class="info-item"><strong>کد ملی والدین:</strong> <span id="displayParentNationalId"></span></div>
+                <div class="info-item"><strong>تاریخ تولد والدین:</strong> <span id="displayBirthDate"></span></div>
+                <div class="info-item"><strong>کد پستی:</strong> <span id="displayPostalCode"></span></div>
+                <div class="info-item"><strong>کد ملی دانش‌آموز:</strong> <span id="displayStudentNationalId"></span></div>
+                <div class="info-item"><strong>توضیحات:</strong> <span id="displayNotes"></span></div>
+                <div class="info-item"><strong>قیمت:</strong> <span class="cost-value" id="displayCost">-</span> تومان</div>
+            </div>
+            <div class="form-actions" style="display:flex;gap:0.5rem;justify-content:center;align-items:center;">
+                <button class="btn-back" id="backBtn"><i class="fas fa-arrow-right"></i></button>
+                <button class="btn-confirm" id="confirmPaymentBtn">تایید و پرداخت</button>
+            </div>
+        </main>
+    </div>
+    <a href="#" class="support-icon" title="پشتیبانی" id="supportBtn"><i class="fas fa-headset"></i></a>
+    <div class="modal" id="supportModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+            <h2>پشتیبانی</h2>
+            <div class="support-layout">
+                <div class="support-sidebar" id="supportSidebar">
+                    <div class="sidebar-header">
+                        <button class="new-chat-btn" id="newConversationBtn" title="گفتگوی جدید">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <h3>گفتگوها</h3>
+                    </div>
+                    <div class="conversations-list" id="conversationsList"></div>
+                </div>
+                <div class="support-main">
+                    <div class="support-panel" id="chatPanel">
+                        <div class="admin-chat-main">
+                            <div class="admin-chat-header">
+                                <a href="admin-chat.html" class="back-link" style="display: none;">
+                                    <i class="fas fa-arrow-right"></i>
+                                    بازگشت
+                                </a>
+                                <strong id="chatPartner">پشتیبانی</strong>
+                            </div>
+                            <div class="admin-chat-messages" id="inlineChatMessages"></div>
+                            <div class="admin-chat-input-area">
+                                <div class="textarea-wrapper">
+                                    <textarea id="inlineMessageInput" rows="1" maxlength="5000" placeholder="پیام خود را اینجا بنویسید..." class="additional-notes"></textarea>
+                                    <div class="attachment-preview hidden" id="inlineAttachmentPreview"></div>
+                                    <button id="inlineSendBtn" class="admin-send-btn" aria-label="ارسال پیام">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="12" y1="19" x2="12" y2="5"></line>
+                                            <polyline points="5 12 12 5 19 12"></polyline>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="pin-attachment" id="inlinePinAttachment" title="افزودن فایل">
+                                        <i class="fas fa-paperclip"></i>
+                                    </button>
+                                    <span class="char-counter" id="charCounter">5000/0</span>
+                                </div>
+                                <input type="file" id="inlineAttachmentFile" accept="image/*,.pdf" style="display: none;" multiple>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js">
+        // Hide old floating icons on mobile, show bottom nav
+        function handleMobileNav() {
+            const isMobile = window.innerWidth <= 768;
+            const oldIcons = document.querySelectorAll('.profile-icon, .support-icon');
+            const bottomNav = document.querySelector('.bottom-nav');
+            
+            if (isMobile) {
+                oldIcons.forEach(icon => {
+                    icon.style.display = 'none';
+                    icon.style.visibility = 'hidden';
+                    icon.style.opacity = '0';
+                });
+                if (bottomNav) {
+                    bottomNav.style.display = 'flex';
+                }
+                document.body.style.paddingBottom = '60px';
+            } else {
+                if (bottomNav) {
+                    bottomNav.style.display = 'none';
+                }
+                document.body.style.paddingBottom = '0';
+            }
+        }
+        
+        window.addEventListener('load', handleMobileNav);
+        window.addEventListener('resize', handleMobileNav);
+
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let data;
+            try {
+                data = JSON.parse(localStorage.getItem('registrationData') || '{}');
+            } catch (error) {
+                data = {};
+            }
+            const trackingCode = localStorage.getItem('lastTrackingCode') || '-';
+            if (Object.keys(data).length === 0) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const reviewData = document.getElementById('reviewData');
+            const SERVICE_TITLES = {
+                schools: 'پیش ثبت نام مدارس',
+                fuel: 'ثبت نام کارت سوخت',
+                marriage: 'اطلاعات ثبت‌نام وام ازدواج',
+                marriageLoanStatus: 'استعلام وضعیت وام ازدواج',
+                marriageLoanRenew: 'تمدید مهلت وام ازدواج',
+                konkor: 'ثبت‌نام کنکور سراسری',
+                subsidy: 'ثبت‌نام یارانه معیشتی',
+                rental: 'ثبت‌نام ودیعه مسکن اجاره',
+                housing: 'ثبت‌نام نهضت ملی مسکن',
+                ieltsToefl: 'ثبت‌نام تافل و آیلتس',
+                internet: 'ثبت‌نام اینترنت پرسرعت',
+                criminalRecord: 'گواهی عدم سوء پیشینه',
+                smartCard: 'کارت ملی هوشمند',
+                healthInsurance: 'بیمه سلامت',
+                urgentLoan: 'وام ضروری',
+                housingPurchase: 'تسهیلات خرید مسکن',
+                housingConstruction: 'وام ساخت مسکن',
+                justiceStocks: 'سهام عدالت',
+                stockRegistration: 'افتتاح کد بورسی',
+                stockTrade: 'خرید و فروش سهام',
+                sjam: 'سجام',
+                elementaryRegistration: 'پیش ثبت نام پایه اول دبستان',
+                middleSchoolRegistration: 'پیش ثبت نام متوسطه اول',
+                highSchoolRegistration: 'پیش ثبت نام متوسطه دوم',
+                specialSchools: 'ثبت نام مدارس خاص',
+                nonGovSchools: 'ثبت نام مدارس غیردولتی',
+                universityRegistration: 'ثبت نام دانشگاه‌ها',
+                employmentExam: 'ثبت نام آزمون استخدامی',
+                technicalInspectionAppointment: 'نوبت معاینه فنی',
+                technicalInspectionValidity: 'استعلام اعتبار معاینه فنی',
+                resumeEmployment: 'رزومه و استخدام',
+                articlesResearch: 'مقاله و تحقیق',
+                customServices: 'خدمات سفارشی',
+                fineInquiry: 'استعلام جریمه',
+                finePayment: 'پرداخت آنلاین جریمه',
+                fineAppeal: 'اعتراض به جریمه'
+            };
+            const FIELD_LABELS = {
+                phone: 'شماره تلفن همراه',
+                nationalId: 'کد ملی',
+                birthDate: 'تاریخ تولد',
+                applicantPhone: 'شماره تلفن همراه',
+                applicantNationalId: 'کد ملی',
+                birthYear: 'تاریخ تولد',
+                birthMonth: 'تاریخ تولد',
+                birthDay: 'تاریخ تولد',
+                marriageYear: 'تاریخ عقد',
+                marriageMonth: 'تاریخ عقد',
+                marriageDay: 'تاریخ عقد',
+                idNumber: 'شماره شناسنامه',
+                additionalNotes: 'توضیحات',
+                notes: 'توضیحات',
+                parentPhone: 'شماره تلفن والدین',
+                parentNationalId: 'کد ملی والدین',
+                postalCode: 'کد پستی',
+                studentNationalId: 'کد ملی دانش‌آموز',
+                ownerPhone: 'شماره تلفن مالک',
+                ownerNationalId: 'کد ملی مالک',
+                plateLetters: 'حروف پلاک',
+                plateNumbersFirst: 'عدد پلاک (۳ رقم اول)',
+                plateNumbersSecond: 'عدد پلاک (۳ رقم آخر)',
+                vin: 'شماره VIN/شاسی',
+                requestType: 'نوع درخواست',
+                regionCode: 'کد منطقه',
+                educationLevel: 'مدرک تحصیلی',
+                familyCount: 'تعداد اعضای خانوار',
+                iban: 'شماره شبا',
+                contractNumber: 'شماره قرارداد',
+                depositAmount: 'مبلغ ودیعه',
+                ownershipStatus: 'وضعیت مالکیت',
+                passportNumber: 'شماره پاسپورت',
+                examType: 'نوع آزمون',
+                city: 'شهر برگزاری',
+                address: 'آدرس',
+                operator: 'اپراتور',
+                internetType: 'نوع اینترنت',
+                birthplace: 'محل صدور',
+                deliveryMethod: 'نحوه دریافت',
+                serialNumber: 'سریال شناسنامه',
+                motherName: 'نام مادر',
+                familyMembers: 'اعضای خانواده',
+                trackingCode: 'کد پیگیری',
+                loanType: 'نوع وام',
+                amount: 'مبلغ',
+                propertyAddress: 'آدرس ملک',
+                constructionAddress: 'آدرس ساخت',
+                constructionArea: 'متراژ ساخت',
+                actionType: 'نوع اقدام',
+                stockCount: 'تعداد سهام',
+                sellPrice: 'قیمت فروش',
+                bankName: 'نام بانک',
+                tradeType: 'نوع معامله',
+                stockSymbol: 'نماد',
+                price: 'قیمت',
+                universityType: 'نوع دانشگاه',
+                preferredField: 'رشته مورد علاقه',
+                preferredOrganization: 'سازمان مورد علاقه',
+                vehicleType: 'نوع خودرو',
+                plateNumber: 'شماره پلاک',
+                preferredDate: 'تاریخ پیشنهادی',
+                preferredSchool: 'مدرسه مورد نظر',
+                fieldOfStudy: 'رشته تحصیلی',
+                schoolType: 'نوع مدرسه',
+                violationNumber: 'شماره تخلف',
+                paymentMethod: 'روش پرداخت',
+                appealReason: 'علت اعتراض',
+                serviceType: 'نوع خدمت',
+                researchType: 'نوع خدمات',
+                jobField: 'رشته شغلی',
+                experienceYears: 'سال‌های تجربه',
+                skills: 'مهارت‌ها',
+                targetJob: 'سمت شغل مورد نظر',
+                customerName: 'نام و نام خانوادگی',
+                customerPhone: 'شماره تلفن',
+                customerEmail: 'ایمیل',
+                serviceDescription: 'توضیحات خدمت',
+                subject: 'رشته / موضوع',
+                academicLevel: 'سطح تحصیلی',
+                pagesCount: 'تعداد صفحات',
+                deadline: 'مهلت تحویل',
+                proposedPrice: 'قیمت پیشنهادی'
+            };
+            const ORDERED_FIELDS_BY_SERVICE = {
+                schools: ['parentPhone', 'parentNationalId', 'birthYear', 'birthMonth', 'birthDay', 'postalCode', 'studentNationalId', 'additionalNotes'],
+                fuel: ['ownerPhone', 'ownerNationalId', 'plateLetters', 'plateNumbersFirst', 'plateNumbersSecond', 'vin', 'requestType', 'additionalNotes'],
+                marriage: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'marriageYear', 'marriageMonth', 'marriageDay', 'idNumber', 'additionalNotes'],
+                marriageLoanStatus: ['applicantPhone', 'trackingCode', 'additionalNotes'],
+                marriageLoanRenew: ['applicantPhone', 'trackingCode', 'additionalNotes'],
+                konkor: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'regionCode', 'educationLevel', 'additionalNotes'],
+                subsidy: ['applicantPhone', 'applicantNationalId', 'postalCode', 'familyCount', 'iban', 'additionalNotes'],
+                rental: ['applicantPhone', 'applicantNationalId', 'postalCode', 'contractNumber', 'iban', 'depositAmount', 'additionalNotes'],
+                housing: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'postalCode', 'familyCount', 'ownershipStatus', 'additionalNotes'],
+                ieltsToefl: ['applicantPhone', 'applicantNationalId', 'passportNumber', 'birthYear', 'birthMonth', 'birthDay', 'examType', 'city', 'additionalNotes'],
+                internet: ['applicantPhone', 'applicantNationalId', 'postalCode', 'address', 'operator', 'internetType', 'additionalNotes'],
+                criminalRecord: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'idNumber', 'birthplace', 'deliveryMethod', 'additionalNotes'],
+                smartCard: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'serialNumber', 'motherName', 'additionalNotes'],
+                healthInsurance: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'postalCode', 'familyMembers', 'additionalNotes'],
+                urgentLoan: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'postalCode', 'loanType', 'amount', 'additionalNotes'],
+                housingPurchase: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'postalCode', 'propertyAddress', 'additionalNotes'],
+                housingConstruction: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'postalCode', 'constructionAddress', 'constructionArea', 'additionalNotes'],
+                justiceStocks: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'actionType', 'stockCount', 'sellPrice', 'additionalNotes'],
+                stockRegistration: ['applicantPhone', 'applicantNationalId', 'bankName', 'additionalNotes'],
+                stockTrade: ['applicantPhone', 'tradeType', 'stockSymbol', 'stockCount', 'price', 'additionalNotes'],
+                sjam: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'bankName', 'additionalNotes'],
+                elementaryRegistration: ['parentPhone', 'parentNationalId', 'studentNationalId', 'postalCode', 'preferredSchool', 'additionalNotes'],
+                middleSchoolRegistration: ['parentPhone', 'parentNationalId', 'studentNationalId', 'postalCode', 'preferredSchool', 'additionalNotes'],
+                highSchoolRegistration: ['parentPhone', 'parentNationalId', 'studentNationalId', 'postalCode', 'preferredSchool', 'fieldOfStudy', 'additionalNotes'],
+                specialSchools: ['parentPhone', 'parentNationalId', 'studentNationalId', 'postalCode', 'schoolType', 'preferredField', 'additionalNotes'],
+                nonGovSchools: ['parentPhone', 'parentNationalId', 'studentNationalId', 'postalCode', 'schoolType', 'preferredSchool', 'additionalNotes'],
+                universityRegistration: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'universityType', 'preferredField', 'additionalNotes'],
+                employmentExam: ['applicantPhone', 'applicantNationalId', 'birthYear', 'birthMonth', 'birthDay', 'examType', 'educationLevel', 'preferredOrganization', 'additionalNotes'],
+                technicalInspectionAppointment: ['ownerPhone', 'ownerNationalId', 'vehicleType', 'plateNumber', 'preferredDate', 'additionalNotes'],
+                technicalInspectionValidity: ['ownerPhone', 'ownerNationalId', 'plateNumber', 'vin', 'additionalNotes'],
+                resumeEmployment: ['serviceType', 'jobField', 'experienceYears', 'skills', 'targetJob', 'customerName', 'customerPhone', 'proposedPrice', 'additionalNotes'],
+                articlesResearch: ['researchType', 'subject', 'academicLevel', 'pagesCount', 'deadline', 'customerName', 'customerPhone', 'proposedPrice', 'additionalNotes'],
+                customServices: ['serviceType', 'customerName', 'customerPhone', 'proposedPrice', 'additionalNotes'],
+                fineInquiry: ['ownerPhone', 'ownerNationalId', 'plateNumber', 'additionalNotes'],
+                finePayment: ['ownerPhone', 'ownerNationalId', 'plateNumber', 'violationNumber', 'paymentMethod', 'additionalNotes'],
+                fineAppeal: ['ownerPhone', 'ownerNationalId', 'plateNumber', 'violationNumber', 'appealReason', 'additionalNotes']
+            };
+            const META_KEYS = ['serviceKey', 'serviceTitle', 'cost', 'attachments', 'username', 'status', 'title'];
+
+            function inferServiceKey() {
+                if (data.serviceKey) return data.serviceKey;
+                if (data.marriageYear || data.marriageMonth || data.marriageDay) return 'marriage';
+                if (data.ownerPhone || data.ownerNationalId || data.vin) return 'fuel';
+                if (data.trackingCode && data.applicantPhone) return 'marriageLoanStatus';
+                if (data.regionCode || data.educationLevel) return 'konkor';
+                if (data.contractNumber || data.depositAmount || data.iban) return 'rental';
+                if (data.ownershipStatus || data.familyCount) return 'housing';
+                if (data.passportNumber || data.examType) return 'ieltsToefl';
+                if (data.address || data.operator) return 'internet';
+                if (data.birthplace || data.deliveryMethod) return 'criminalRecord';
+                if (data.serialNumber || data.motherName) return 'smartCard';
+                if (data.familyMembers) return 'healthInsurance';
+                if (data.loanType || data.amount) return 'urgentLoan';
+                if (data.propertyAddress) return 'housingPurchase';
+                if (data.constructionAddress || data.constructionArea) return 'housingConstruction';
+                if (data.actionType || data.stockCount || data.sellPrice) return 'justiceStocks';
+                if (data.tradeType || data.stockSymbol || data.price) return 'stockTrade';
+                if (data.serviceDescription) return 'customServices';
+                if (data.researchType || data.subject || data.academicLevel) return 'articlesResearch';
+                if (data.jobField || data.experienceYears || data.skills) return 'resumeEmployment';
+                if (data.studentNationalId || data.preferredSchool) return 'schools';
+                if (data.bankName) return 'stockRegistration';
+                return 'schools';
+            }
+
+            function isSpecialService() {
+                const key = inferServiceKey();
+                return key === 'resumeEmployment' || key === 'customServices' || key === 'articlesResearch';
+            }
+
+            const serviceKey = inferServiceKey();
+            const title = data.serviceTitle || SERVICE_TITLES[serviceKey] || 'اطلاعات وارد شده';
+            const orderedFields = (ORDERED_FIELDS_BY_SERVICE[serviceKey] || Object.keys(data).filter(key => !META_KEYS.includes(key)))
+                .filter(key => data[key] !== undefined && data[key] !== null && data[key] !== '');
+            const attachmentField = orderedFields.includes('additionalNotes') ? 'additionalNotes' : orderedFields.includes('notes') ? 'notes' : orderedFields[orderedFields.length - 1];
+            const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, char => HTML_ESCAPE_MAP[char]);
+            }
+
+            function joinDateParts(prefix) {
+                return [data[prefix + 'Year'], data[prefix + 'Month'], data[prefix + 'Day']].filter(Boolean).join('/');
+            }
+
+            function formatFieldValue(key, value) {
+                if (value === undefined || value === null || value === '') return '-';
+                if (key === 'birthYear') return joinDateParts('birth') || value;
+                if (key === 'marriageYear') return joinDateParts('marriage') || value;
+                return value;
+            }
+
+            const renderedFields = orderedFields.map((key, index) => {
+                const spanId = key === attachmentField ? 'displayNotes' : 'displayField' + index;
+                return '<div class="info-item"><strong>' + escapeHtml(FIELD_LABELS[key] || key) + ':</strong> <span id="' + spanId + '">' + escapeHtml(formatFieldValue(key, data[key])) + '</span></div>';
+            }).join('');
+
+            const costValue = data.cost ? formatPrice(data.cost) : '';
+            const costLine = '<div class="info-item"><strong>قیمت:</strong> <span class="cost-value" id="displayCost">' + costValue + '</span></div>';
+            reviewData.innerHTML = '<h2>' + escapeHtml(title) + '<br><strong style="font-size:0.9rem;color:#667eea;">کد سفارش: ' + escapeHtml(trackingCode) + '</strong></h2>' + renderedFields + costLine;
+
+            const confirmBtn = document.getElementById('confirmPaymentBtn');
+            if (isSpecialService()) {
+                confirmBtn.textContent = 'تایید';
+            } else {
+                confirmBtn.textContent = 'تایید و پرداخت';
+            }
+
+            const backBtn = document.getElementById('backBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function() {
+                    history.back();
+                });
+            }
+
+            function renderAttachmentButton(targetId, attachments, adminMode) {
+                var target = document.getElementById(targetId);
+                if (!target) return;
+
+                var button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'detail-attachment-button';
+                button.setAttribute('data-code', trackingCode);
+                button.title = 'مشاهده فایل‌های پیوست';
+                button.innerHTML = '<i class="fas fa-image"></i>';
+                button.addEventListener('click', function() {
+                    window.openAttachmentPopup(attachments || [], { adminMode: adminMode, code: trackingCode });
+                });
+                target.parentNode.appendChild(button);
+            }
+
+            async function loadAttachmentsForReview() {
+                var attachments = data.attachments || [];
+                var hasDataUrl = attachments.some(function(a) { return a && (a.dataUrl || a.url); });
+                if (!hasDataUrl && trackingCode && trackingCode !== '-') {
+                    try {
+                        var response = await fetch('/api/order/' + encodeURIComponent(trackingCode));
+                        if (response.ok) {
+                            var order = await response.json();
+                            attachments = order.attachments || attachments;
+                            hasDataUrl = attachments.some(function(a) { return a && (a.dataUrl || a.url); });
+                        }
+                    } catch (error) {}
+                    if (!hasDataUrl) {
+                        attachments = await (window.getAttachmentsForTrackingCode ? window.getAttachmentsForTrackingCode(trackingCode) : []);
+                    }
+                }
+                if (attachments.length > 0) {
+                    renderAttachmentButton('displayNotes', attachments, false);
+                } else {
+                    renderAttachmentButton('displayNotes', [], false);
+                }
+            }
+
+            loadAttachmentsForReview();
+        });
+    
+        // Hide old floating icons on mobile, show bottom nav
+        function handleMobileNav() {
+            const isMobile = window.innerWidth <= 768;
+            const oldIcons = document.querySelectorAll('.profile-icon, .support-icon');
+            const bottomNav = document.querySelector('.bottom-nav');
+            
+            if (isMobile) {
+                oldIcons.forEach(icon => {
+                    icon.style.display = 'none';
+                    icon.style.visibility = 'hidden';
+                    icon.style.opacity = '0';
+                });
+                if (bottomNav) {
+                    bottomNav.style.display = 'flex';
+                }
+                document.body.style.paddingBottom = '60px';
+            } else {
+                if (bottomNav) {
+                    bottomNav.style.display = 'none';
+                }
+                document.body.style.paddingBottom = '0';
+            }
+        }
+        
+        window.addEventListener('load', handleMobileNav);
+        window.addEventListener('resize', handleMobileNav);
+
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

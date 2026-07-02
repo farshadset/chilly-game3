@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="fonts/all.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>پنل مدیریت</h1>
+        </header>
+        <main>
+            <div class="form-card" id="adminPanel">
+                <a href="admin-orders.html" class="profile-option" style="display: flex; align-items: center;">
+                    <i class="fas fa-list"></i>
+                    <span>لیست سفارش‌ها</span>
+                    <span class="badge" id="ordersBadge" style="display: none;">0</span>
+                </a>
+                <a href="admin-customers.html" class="profile-option" style="display: flex; align-items: center;">
+                    <i class="fas fa-users"></i>
+                    <span>مشتریان</span>
+                    <span class="badge" id="customersBadge" style="display: none;">0</span>
+                </a>
+                <a href="admin-chat.html" class="profile-option" style="display: flex; align-items: center;">
+                    <i class="fas fa-comments"></i>
+                    <span>چت با مشتری</span>
+                    <span class="badge" id="chatBadge" style="display: none;">0</span>
+                </a>
+                <a href="admin-pricing.html" class="profile-option" style="display: flex; align-items: center;">
+                    <i class="fas fa-tag"></i>
+                    <span>قیمت گذاری</span>
+                </a>
+                <a href="admin-banner.html" class="profile-option" style="display: flex; align-items: center;">
+                    <i class="fas fa-image"></i>
+                    <span>بنر</span>
+                </a>
+                <a href="#" class="profile-option" id="adminLogoutBtn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    خروج
+                </a>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/admin/customers')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var badge = document.getElementById('customersBadge');
+                    if (badge && data.totalCustomers > 0) {
+                        badge.textContent = data.totalCustomers;
+                        badge.style.display = 'inline-block';
+                    }
+                })
+                .catch(function() {});
+        });
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

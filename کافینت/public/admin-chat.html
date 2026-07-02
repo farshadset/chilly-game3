@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لیست مشتریان</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="fonts/all.css">
+    <style>
+        .customer-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .customer-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s;
+        }
+        .customer-item:hover {
+            background: #f5f7ff;
+        }
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .customer-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .customer-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 0.15rem;
+        }
+        .customer-last-msg {
+            font-size: 0.85rem;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            direction: rtl;
+        }
+        .badge {
+            background: #e74c3c;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 22px;
+            text-align: center;
+        }
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 3rem 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>مشتریان</h1>
+        </header>
+        <main>
+            <div class="form-card">
+                <div class="customer-list" id="customersList">
+                    <p class="empty-state">در حال بارگذاری...</p>
+                </div>
+            </div>
+            <a href="admin.html" class="btn-next" style="margin-top: 1rem;">بازگشت به مدیریت</a>
+        </main>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var listEl = document.getElementById('customersList');
+
+            function loadCustomers() {
+                fetch('/api/admin/chat/customers')
+                    .then(function(r) { return r.json(); })
+                    .then(function(customers) {
+                        listEl.innerHTML = '';
+                        if (!customers || customers.length === 0) {
+                            listEl.innerHTML = '<p class="empty-state">هیچ مشتری پیامی ندارد</p>';
+                            return;
+                        }
+                        customers.forEach(function(c) {
+                            var a = document.createElement('a');
+                            a.href = 'admin-chat-conversation.html?username=' + encodeURIComponent(c.username);
+                            a.className = 'customer-item';
+                            var initial = (c.username || '?')[0];
+                            a.innerHTML =
+                                '<div class="avatar">' + initial + '</div>' +
+                                '<div class="customer-info">' +
+                                    '<div class="customer-name">' + (c.username || 'مهمان') + '</div>' +
+                                    '<div class="customer-last-msg">' + (c.lastMessage || '') + '</div>' +
+                                '</div>' +
+                                (c.unread > 0 ? '<span class="badge">' + c.unread + '</span>' : '');
+                            listEl.appendChild(a);
+                        });
+                    })
+                    .catch(function() {
+                        listEl.innerHTML = '<p class="empty-state" style="color:red;">خطا در بارگذاری</p>';
+                    });
+            }
+
+            loadCustomers();
+        });
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">جزئیات بازی - کافینت آنلاین</title>
+    <link rel="stylesheet" href="style.css?v=20260701">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+    <link rel="stylesheet" href="fonts/all.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <a href="games.html" class="back-btn" title="بازگشت">
+            <i class="fas fa-arrow-right"></i> بازی‌ها
+        </a>
+
+        <div id="gameDetail" class="game-detail">
+            <div class="loading">در حال بارگذاری...</div>
+        </div>
+    </div>
+
+    <script>
+        const slug = new URLSearchParams(window.location.search).get('id');
+        if (!slug) {
+            document.getElementById('gameDetail').innerHTML = '<div class="error">بازی پیدا نشد</div>';
+        }
+
+        async function translateText(text) {
+            if (!text || text.length < 3) return text;
+            if (/[\u0600-\u06FF]/.test(text)) return text;
+
+            const cacheKey = 'tr_' + btoa(text.slice(0, 100));
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) return cached;
+
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 500))}&langpair=en|fa`;
+                const response = await fetch(url);
+                const data = await response.json();
+                let translated = text;
+                if (data.responseData && data.responseData.translatedText) {
+                    translated = data.responseData.translatedText;
+                }
+                localStorage.setItem(cacheKey, translated);
+                return translated;
+            } catch (error) {
+                return text;
+            }
+        }
+
+        async function loadGameDetail() {
+            if (!slug) return;
+
+            try {
+                const res = await fetch(`/api/games/${slug}`);
+                const game = await res.json();
+
+                document.getElementById('pageTitle').textContent = game.name + ' - کافینت آنلاین';
+
+                const genres = (game.genres || []).map(g => g.name).join('، ');
+                const platforms = (game.platforms || []).map(p => p.platform ? p.platform.name : p.name).join('، ');
+                const developers = (game.developers || []).map(d => d.name).join('، ');
+                const publishers = (game.publishers || []).map(p => p.name).join('، ');
+                const rating = (game.rating || 0).toFixed(1);
+                const playtime = game.playtime ? game.playtime + ' ساعت' : '-';
+                const released = game.released ? new Date(game.released).toLocaleDateString('fa-IR') : '-';
+                const bgRaw = game.background_image || game.background_image_additional || '';
+                let background = game.image_base64 ? ('data:image/jpeg;base64,' + game.image_base64) : (bgRaw ? ('/api/image-proxy?url=' + encodeURIComponent(bgRaw)) : '');
+
+                let html = `
+                    <div class="game-detail-hero">
+                        ${background ? `<img src="${background}" alt="${game.name}" class="hero-image">` : ''}
+                        <div class="hero-overlay">
+                            <h1>${game.name}</h1>
+                            <div class="game-meta-tags">
+                                ${genres ? `<span class="tag">${genres}</span>` : ''}
+                                ${platforms ? `<span class="tag">${platforms}</span>` : ''}
+                                <span class="tag rating">⭐ ${rating}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="game-info-grid">
+                        <div class="info-section">
+                            <h2>درباره بازی</h2>
+                            <p class="game-summary" id="gameSummary">در حال ترجمه...</p>
+                        </div>
+
+                        <div class="info-section">
+                            <h2>اطلاعات کلی</h2>
+                            <ul class="info-list">
+                                <li><strong>تاریخ انتشار:</strong> ${released}</li>
+                                ${developers ? `<li><strong>توسعه‌دهنده:</strong> ${developers}</li>` : ''}
+                                ${publishers ? `<li><strong>ناشر:</strong> ${publishers}</li>` : ''}
+                                <li><strong>امتیاز:</strong> ⭐ ${rating}</li>
+                                <li><strong>زمان بازی:</strong> ${playtime}</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div id="storesSection" class="stores-section">
+                        <h2>لینک خرید</h2>
+                        <div class="loading">در حال بارگذاری...</div>
+                    </div>
+
+                    <div id="screenshotsSection" class="screenshots-section">
+                        <h2>تصاویر</h2>
+                        <div class="loading">در حال بارگذاری...</div>
+                    </div>
+
+                    <div id="similarSection" class="similar-section">
+                        <h2>بازی‌های مشابه</h2>
+                        <div class="loading">در حال بارگذاری...</div>
+                    </div>
+                `;
+
+                document.getElementById('gameDetail').innerHTML = html;
+
+                const summaryEl = document.getElementById('gameSummary');
+                const rawDesc = game.description_raw || game.description || '';
+                translateText(rawDesc).then(translatedDesc => {
+                    if (summaryEl) summaryEl.textContent = translatedDesc || 'توضیحات موجود نیست.';
+                }).catch(() => {
+                    if (summaryEl) summaryEl.textContent = rawDesc || 'توضیحات موجود نیست.';
+                });
+
+                loadStores(slug);
+                loadScreenshots(slug);
+                loadSimilar(game.genres || []);
+
+            } catch (error) {
+                document.getElementById('gameDetail').innerHTML = '<div class="error">خطا در بارگذاری اطلاعات بازی</div>';
+            }
+        }
+
+        async function loadStores(slug) {
+            try {
+                const res = await fetch(`/api/games/${slug}/stores`);
+                const data = await res.json();
+                const section = document.getElementById('storesSection');
+
+                if (!data.results || data.results.length === 0) {
+                    section.innerHTML = '<h2>لینک خرید</h2><p>لینک خریدی پیدا نشد.</p>';
+                    return;
+                }
+
+                const stores = data.results.map(s => s.store);
+                const storeColors = {
+                    'Steam': '#1b2838',
+                    'Epic Games': '#313131',
+                    'GOG': '#86328a',
+                    'Microsoft Store': '#107c10',
+                    'PlayStation Store': '#003791',
+                    'Microsoft': '#107c10',
+                    'Xbox Store': '#107c10',
+                    'Nintendo Store': '#e60012',
+                    'Apple App Store': '#007aff',
+                    'Google Play': '#4caf50',
+                    'itch.io': '#fa5c5c',
+                };
+
+                let html = '<h2>لینک خرید</h2><div class="stores-grid">';
+                stores.forEach(store => {
+                    const color = storeColors[store.name] || '#666';
+                    html += `<a href="${store.domain}" target="_blank" rel="noopener" class="store-btn" style="background:${color}">${store.name}</a>`;
+                });
+                html += '</div>';
+                section.innerHTML = html;
+
+            } catch (error) {
+                document.getElementById('storesSection').innerHTML = '<h2>لینک خرید</h2><p>خطا در بارگذاری لینک‌ها.</p>';
+            }
+        }
+
+        async function loadScreenshots(slug) {
+            try {
+                const res = await fetch(`/api/games/${slug}/screenshots`);
+                const data = await res.json();
+                const section = document.getElementById('screenshotsSection');
+
+                if (!data.results || data.results.length === 0) {
+                    section.innerHTML = '<h2>تصاویر</h2><p>تصویری پیدا نشد.</p>';
+                    return;
+                }
+
+                let html = '<h2> تصاویر</h2><div class="screenshot-grid">';
+                data.results.forEach(s => {
+                    const proxied = '/api/image-proxy?url=' + encodeURIComponent(s.image);
+                    html += `<img src="${proxied}" alt="تصویر بازی" loading="lazy" class="screenshot" onclick="window.open('${proxied}', '_blank')">`;
+                });
+                html += '</div>';
+                section.innerHTML = html;
+
+            } catch (error) {
+                document.getElementById('screenshotsSection').innerHTML = '<h2>تصاویر</h2><p>خطا در بارگذاری تصاویر.</p>';
+            }
+        }
+
+        async function loadSimilar(genres) {
+            if (!genres || genres.length === 0) {
+                document.getElementById('similarSection').innerHTML = '<h2>بازی‌های مشابه</h2>';
+                return;
+            }
+
+            const genreIds = genres.map(g => g.slug).slice(0, 2).join(',');
+            try {
+                const res = await fetch(`/api/games/search?genres=${genreIds}&page_size=6`);
+                const data = await res.json();
+                const section = document.getElementById('similarSection');
+
+                if (!data.results || data.results.length === 0) {
+                    section.innerHTML = '<h2>بازی‌های مشابه</h2>';
+                    return;
+                }
+
+                let html = '<h2>بازی‌های مشابه</h2><div class="similar-grid">';
+                const similarFiltered = data.results.filter(g => (g.rating || 0) >= 3);
+                if (similarFiltered.length === 0) {
+                    section.innerHTML = '<h2>بازی‌های مشابه</h2>';
+                    return;
+                }
+                similarFiltered.forEach(game => {
+                    const rating = (game.rating || 0).toFixed(1);
+                    let bgRaw = game.background_image || game.background_image_additional || '';
+                    if (bgRaw && bgRaw.includes('/screenshots/')) {
+                        const alt = game.background_image_additional || '';
+                        if (alt && !alt.includes('/screenshots/')) {
+                            bgRaw = alt;
+                        }
+                    }
+                    const bg = bgRaw ? '/api/image-proxy?url=' + encodeURIComponent(bgRaw) : 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 200%22><rect fill=%22%23164A41%22 width=%22400%22 height=%22200%22/><text fill=%22%23666%22 font-family=%22Arial%22 font-size=%2224%22 x=%22200%22 y=%22110%22 text-anchor=%22middle%22>No Image</text></svg>';
+                    html += `
+                        <a href="game-detail.html?id=${game.slug}" class="similar-card">
+                            <img src="${bg}" alt="${game.name}" loading="lazy">
+                            <h4>${game.name}</h4>
+                            <span>⭐ ${rating}</span>
+                        </a>
+                    `;
+                });
+                html += '</div>';
+                section.innerHTML = html;
+
+            } catch (error) {
+                document.getElementById('similarSection').innerHTML = '<h2>بازی‌های مشابه</h2>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadGameDetail);
+    
+        // Hide old floating icons on mobile, show bottom nav
+        function handleMobileNav() {
+            const isMobile = window.innerWidth <= 768;
+            const oldIcons = document.querySelectorAll('.profile-icon, .support-icon');
+            const bottomNav = document.querySelector('.bottom-nav');
+            
+            if (isMobile) {
+                oldIcons.forEach(icon => {
+                    icon.style.display = 'none';
+                    icon.style.visibility = 'hidden';
+                    icon.style.opacity = '0';
+                });
+                if (bottomNav) {
+                    bottomNav.style.display = 'flex';
+                }
+                document.body.style.paddingBottom = '60px';
+            } else {
+                if (bottomNav) {
+                    bottomNav.style.display = 'none';
+                }
+                document.body.style.paddingBottom = '0';
+            }
+        }
+        
+        window.addEventListener('load', handleMobileNav);
+        window.addEventListener('resize', handleMobileNav);
+
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

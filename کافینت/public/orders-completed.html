@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سفارش‌های انجام شده</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="stylesheet" href="fonts/all.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>سفارش‌های انجام شده</h1>
+        </header>
+        <main>
+            <div class="form-card" id="completedOrders">
+                <p>بارگذاری...</p>
+            </div>
+            <a href="profile.html" class="btn-next">بازگشت</a>
+        </main>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var container = document.getElementById('completedOrders');
+            var userData = JSON.parse(localStorage.getItem('userData') || 'null');
+            var username = userData ? userData.username : null;
+            fetch('/api/orders/user?username=' + encodeURIComponent(username) + '&status=completed')
+                .then(function(r) { return r.json(); })
+                .then(function(orders) {
+                    container.innerHTML = '';
+                    if (orders.length === 0) {
+                        container.innerHTML = '<p style="text-align:center;color:#999;">سفارشی انجام شده نیست.</p>';
+                        return;
+                    }
+                    orders.forEach(function(order) {
+                        var div = document.createElement('div');
+                        var serviceTitle = order.title || '-';
+                        if (!order.title) {
+                            var isFuelCard = order.ownerPhone || order.ownerNationalId || order.vin;
+                            var isMarriageLoan = order.applicantPhone || order.applicantNationalId || order.idNumber;
+                            var isKonkor = order.regionCode || order.educationLevel || order.applicantNationalId;
+                            var isRental = order.contractNumber || order.depositAmount || order.iban;
+                            var isHousing = order.ownershipStatus || order.familyCount;
+                            var isIeltsToefl = order.passportNumber || order.examType;
+                            var isInternet = order.address || order.operator;
+                            var isCriminalRecord = order.birthplace;
+                            var isSmartCard = order.serialNumber;
+                            var isHealthInsurance = order.familyMembers;
+                            
+                            if (isFuelCard) serviceTitle = 'کارت سوخت';
+                            else if (isMarriageLoan) serviceTitle = 'وام ازدواج';
+                            else if (isKonkor) serviceTitle = 'کنکور سراسری';
+                            else if (isRental) serviceTitle = 'ودیعه مسکن اجاره';
+                            else if (isHousing) serviceTitle = 'نهضت ملی مسکن';
+                            else if (isIeltsToefl) serviceTitle = 'ثبت‌نام تافل و آیلتس';
+                            else if (isInternet) serviceTitle = 'ثبت‌نام اینترنت پرسرعت';
+                            else if (isCriminalRecord) serviceTitle = 'گواهی عدم سوء پیشینه';
+                            else if (isSmartCard) serviceTitle = 'کارت ملی هوشمند';
+                            else if (isHealthInsurance) serviceTitle = 'بیمه سلامت';
+                            else serviceTitle = 'پیش ثبت نام مدارس';
+                        }
+                        div.className = 'order-card';
+                        var dateStr = order.created_at ? new Date(order.created_at).toLocaleDateString('fa-IR') : '-';
+                        div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">' +
+                            '<div class="order-title">' + serviceTitle + '</div>' +
+                            '<small style="color:#666;">' + dateStr + '</small>' +
+                            '</div>' +
+                            '<div style="margin-bottom:0.25rem;text-align:center;">' +
+                            '<strong>کد سفارش: ' + order.trackingCode + '</strong>' +
+                            '</div>' +
+                            (order.result ? '<div style="margin-bottom:0.5rem;text-align:center;direction:rtl;"><strong style="color:#27ae60;">نتیجه: </strong><span>' + order.result + '</span></div>' : '') +
+                            '<div class="order-actions">' +
+                            '<a href="order-detail.html?code=' + order.trackingCode + '" class="btn-view-detail">جزئیات سفارش</a>' + '</div>';
+                        container.appendChild(div);
+                    });
+
+                })
+                .catch(function() {
+                    container.innerHTML = '<p style="text-align:center;color:red;">خطا در بارگذاری سفارشات.</p>';
+                });
+        });
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>

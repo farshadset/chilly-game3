@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ثبت درخواست</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="fonts/all.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="logo-icon" title="صفحه اصلی">
+            <i class="fas fa-mug-hot"></i>
+        </a>
+        <header>
+            <h1>ثبت درخواست</h1>
+        </header>
+        <main>
+            <div class="form-card">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2 id="successTitle">درخواست با موفقیت ثبت شد!</h2>
+                <p>درخواست شما برای بررسی مدیر ارسال شد. پس از تایید قیمت، می‌توانید پرداخت را انجام دهید.</p>
+                <p class="tracking-code">کد سفارش: <strong id="trackingCode"></strong></p>
+                <a href="orders-pending.html" class="btn-next">سفارش‌های در صف انتظار</a>
+                <a href="index.html" class="btn-next" style="background:#999;margin-top:0.5rem;">بازگشت به صفحه اصلی</a>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var tc = localStorage.getItem('lastTrackingCode');
+            var registrationData = JSON.parse(localStorage.getItem('registrationData') || '{}');
+            
+            if (tc && document.getElementById('trackingCode')) {
+                document.getElementById('trackingCode').textContent = tc;
+            }
+            
+// Check if special service
+            var isSpecial = registrationData.serviceKey === 'resumeEmployment' || 
+                          registrationData.serviceKey === 'customServices' || 
+                          registrationData.serviceKey === 'articlesResearch';
+            
+            if (!isSpecial) {
+                document.getElementById('successTitle').textContent = 'پرداخت با موفقیت انجام شد!';
+            }
+        });
+    </script>
+    <nav class="bottom-nav">
+        <a href="/" class="nav-icon" title="خانه">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="/profile.html" class="nav-icon" title="پروفایل">
+            <i class="fas fa-user"></i>
+        </a>
+        <a href="#" class="nav-icon" title="پشتیبانی" id="supportNavBtn">
+            <i class="fas fa-headset"></i>
+        </a>
+    </nav>
+</body>
+</html>
