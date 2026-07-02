@@ -1,0 +1,8 @@
+{
+  "name": "chilly-game-root",
+  "version": "1.0.0",
+  "description": "کافینت آنلاین",
+  "scripts": {
+    "start": "cd کافینت && npm start"
+  }
+}
